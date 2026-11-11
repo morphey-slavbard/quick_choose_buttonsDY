@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deposits and payments</title>
+<style>
+  :root {
+    --navy: #0d0d6b;
+    --blue: #1f2fc4;
+    --blue-dark: #121a8f;
+    --grey-bg: #f2f2f4;
+    --line: #d9d9e3;
+    --disabled: #b3b3b3;
+    --radius-pill: 999px;
+    font-family: "Gotham Rounded", "Nunito", "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+    color: var(--navy);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #fff; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+
+  /* Header */
+  .site-header { height: 72px; display: flex; align-items: center; gap: 36px; padding: 0 24px 0 8px; background: linear-gradient(90deg, #2135c9, #1c2db8); color: #fff; }
+  .logo { width: 40px; height: 48px; }
+  .nav { display: flex; gap: 32px; font-size: 13px; font-weight: 800; }
+  .nav span::after { content: ""; display: inline-block; width: 6px; height: 6px; margin: 0 0 3px 8px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+  .nav span.plain::after { display: none; }
+  .balance { margin-left: auto; text-align: right; font-size: 11px; }
+  .balance strong { display: block; font-size: 18px; }
+  .avatar { position: relative; width: 56px; height: 34px; border-radius: var(--radius-pill); background: #fff; display: flex; align-items: center; padding-left: 2px; }
+  .avatar::before { content: ""; width: 30px; height: 30px; border-radius: 50%; background: var(--navy); }
+  .avatar .badge { position: absolute; top: -8px; left: 22px; min-width: 16px; height: 16px; border-radius: 50%; background: #c8102e; font-size: 10px; font-weight: 800; display: grid; place-items: center; }
+
+  /* Layout */
+  .layout { display: grid; grid-template-columns: 285px 1fr; min-height: 525px; }
+  .sidebar { background: var(--grey-bg); padding: 36px 20px 0 6px; }
+  .sidebar h2 { margin: 0 0 30px 40px; font-size: 17px; font-weight: 800; text-decoration: underline; text-underline-offset: 4px; }
+  .sidebar hr { border: 0; border-top: 1px solid var(--line); margin: 0 0 22px; }
+  .menu { list-style: none; margin: 0; padding: 0; font-size: 13px; font-weight: 800; }
+  .menu li { display: flex; align-items: center; gap: 14px; height: 40px; margin-bottom: 4px; padding-left: 18px; border-radius: 6px; }
+  .menu li::before { content: ""; width: 16px; height: 16px; border: 2px solid currentColor; border-radius: 4px; }
+  .menu li.active { background: var(--navy); color: #fff; }
+  .menu .count { min-width: 20px; height: 20px; border-radius: 50%; background: #c8102e; color: #fff; font-size: 11px; display: grid; place-items: center; }
+  .menu .signout { margin-top: 40px; }
+
+  .content { padding: 26px 32px; }
+  .content h1 { margin: 0 0 26px; font-size: 32px; font-weight: 900; letter-spacing: -.01em; }
+  .row { display: grid; grid-template-columns: 270px 270px 270px; gap: 18px; }
+  .content h3 { margin: 0 0 12px; font-size: 18px; font-weight: 900; }
+  .content p { margin: 0; font-size: 12px; line-height: 1.6; }
+  .btn-outline { height: 40px; padding: 0 20px; border: 2px solid var(--navy); border-radius: var(--radius-pill); background: #fff; font-size: 13px; font-weight: 800; margin-top: 14px; }
+  .tx-card { height: 170px; border-radius: 6px; background: var(--blue); color: #fff; padding: 20px 14px; font-size: 12px; font-weight: 800; }
+  .tx-card .amount { font-size: 28px; font-weight: 900; }
+  .tx-card button { float: right; margin-top: 22px; height: 40px; padding: 0 20px; border: 0; border-radius: var(--radius-pill); background: #fff; color: var(--navy); font-weight: 800; }
+  .debit-card { position: relative; height: 170px; overflow: hidden; border-radius: 6px; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.12); padding: 40px 14px; font-size: 11px; }
+  .debit-card::after { content: ""; position: absolute; top: -60px; right: -120px; width: 290px; height: 290px; border-radius: 50%; background: var(--blue); opacity: .9; }
+  .debit-card strong { display: block; margin: 6px 0 18px; font-size: 12px; }
+  .all-tx { width: 260px; margin-top: 18px; padding: 18px 14px; border-radius: 6px; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.12); height: 175px; }
+
+  .footer-hero { height: 100px; background: var(--navy); color: #fff; display: grid; place-items: center; font-size: 26px; font-weight: 900; }
+  .feedback { height: 72px; background: var(--blue); color: #fff; display: flex; align-items: center; justify-content: center; gap: 14px; font-size: 12px; }
+  .feedback button { height: 30px; padding: 0 20px; border: 2px solid #fff; border-radius: var(--radius-pill); background: transparent; color: #fff; font-weight: 800; }
+
+  /* Deposit modal */
+  .overlay { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(20, 20, 40, .45); }
+  .overlay[hidden] { display: none; }
+  .modal { width: 360px; padding: 22px 20px 20px; border-radius: 12px; background: #fff; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+  .modal-top { display: flex; justify-content: space-between; align-items: flex-start; }
+  .step { font-size: 11px; font-weight: 600; }
+  .close { width: 24px; height: 24px; margin: 4px -4px 0 0; border: 0; background: none; font-size: 22px; line-height: 1; font-weight: 700; }
+  .modal h2 { margin: 6px 0 26px; font-size: 21px; font-weight: 900; letter-spacing: -.01em; }
+  .modal .label { display: block; margin-bottom: 18px; font-size: 13px; font-weight: 800; }
+  .quick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 30px; }
+  .quick button { height: 40px; border: 2px solid var(--navy); border-radius: var(--radius-pill); background: #fff; font-size: 13px; font-weight: 800; }
+  .quick button[aria-pressed="true"] { background: var(--navy); color: #fff; }
+  .amount-field { display: flex; align-items: center; height: 40px; margin-top: -8px; padding: 0 8px; border: 1px solid var(--navy); border-radius: 6px; }
+  .amount-field:focus-within { outline: 2px solid var(--blue); outline-offset: 1px; }
+  .amount-field span { font-size: 13px; font-weight: 600; }
+  .amount-field input { flex: 1; height: 100%; border: 0; outline: 0; padding: 0 2px; font: inherit; font-size: 13px; color: inherit; }
+  .hint { margin: 10px 0 34px; font-size: 11px; }
+  .hint.error { color: #c8102e; font-weight: 700; }
+  .deposit { width: 100%; height: 40px; border: 0; border-radius: var(--radius-pill); background: var(--navy); color: #fff; font-size: 13px; font-weight: 800; }
+  .deposit:disabled { background: var(--disabled); cursor: not-allowed; }
+
+  /* Demo customers flyout */
+  .flyout { position: fixed; z-index: 10; top: 0; right: 0; bottom: 0; width: 360px; display: flex; flex-direction: column; background: #fff; box-shadow: -6px 0 24px rgba(0,0,0,.2); font-size: 12px; transform: translateX(100%); transition: transform .25s ease; }
+  .flyout.open { transform: none; }
+  .flyout-tab { position: absolute; top: 120px; right: 100%; padding: 12px 10px; border: 0; border-radius: 8px 0 0 8px; background: #ffd23f; color: var(--navy); font-weight: 800; writing-mode: vertical-rl; transform: rotate(180deg); box-shadow: -3px 0 10px rgba(0,0,0,.15); }
+  .flyout header { padding: 16px; background: var(--navy); color: #fff; }
+  .flyout header h2 { margin: 0; font-size: 16px; }
+  .flyout header p { margin: 4px 0 0; opacity: .8; }
+  .flyout-body { flex: 1; overflow-y: auto; padding: 14px 16px; }
+  .customer { margin-bottom: 10px; padding: 10px; border: 2px solid var(--line); border-radius: 8px; }
+  .customer.active { border-color: var(--blue); background: #f3f5ff; }
+  .customer label { display: grid; grid-template-columns: 90px 1fr; align-items: center; gap: 8px; margin-bottom: 6px; font-weight: 700; }
+  .customer input { height: 28px; padding: 0 8px; border: 1px solid var(--line); border-radius: 4px; font: inherit; color: inherit; min-width: 0; }
+  .customer button { width: 100%; height: 30px; margin-top: 4px; border: 0; border-radius: var(--radius-pill); background: var(--navy); color: #fff; font-weight: 800; }
+  .flyout h3 { margin: 16px 0 6px; font-size: 13px; }
+  .flyout pre { margin: 0; max-height: 260px; overflow: auto; padding: 10px; border-radius: 6px; background: #0f1021; color: #c9f7c9; font-size: 11px; line-height: 1.4; white-space: pre-wrap; word-break: break-all; }
+  .flyout .status { font-weight: 700; }
+  .flyout .status.error { color: #c8102e; }
+</style>
+</head>
+<body>
+  <header class="site-header">
+    <svg class="logo" viewBox="0 0 40 48" aria-label="The National Lottery"><path fill="#fff" d="M14 4c4 0 6 6 6 12l4-8c3-4 8-1 6 3l-6 12c6 0 10 4 10 10 0 7-6 13-14 13S6 40 6 32c0-5 2-9 6-11L10 9c-1-3 1-5 4-5z"/><circle cx="16" cy="32" r="2" fill="#2135c9"/><circle cx="25" cy="32" r="2" fill="#2135c9"/></svg>
+    <nav class="nav"><span>Draw games</span><span>Instant games</span><span>Results</span><span>Responsible Play</span><span class="plain">Winners and good causes</span></nav>
+    <div class="balance">Balance<strong>£2.00</strong></div>
+    <div class="avatar"><span class="badge">3</span></div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <h2>My account</h2>
+      <hr>
+      <ul class="menu">
+        <li>My games</li>
+        <li>Spend and play settings</li>
+        <li>Direct Debit</li>
+        <li class="active">Deposits and payments</li>
+        <li>My messages <span class="count">3</span></li>
+        <li>Details and settings</li>
+        <li class="signout">Sign out</li>
+      </ul>
+    </aside>
+
+    <main class="content">
+      <h1>Deposits and payments</h1>
+      <div class="row">
+        <div>
+          <h3>Debit card details</h3>
+          <p>To update your debit card, all funds must be withdrawn to your current card. Please ensure that you have no ongoing draw or instant game purchases.</p>
+          <button class="btn-outline">Update debit card</button>
+        </div>
+        <div class="tx-card">
+          Transaction options
+          <div>Current balance: <span class="amount">£2.00</span></div>
+          <button type="button" id="open-deposit">Deposit</button>
+        </div>
+        <div class="debit-card">Card number<strong>•••• •••• •••• 4071</strong>Expiry date<strong>10/28</strong></div>
+      </div>
+      <div class="all-tx"><h3>All transactions</h3><p>View all your account transactions.</p><button class="btn-outline" style="margin-top:50px">View all</button></div>
+    </main>
+  </div>
+
+  <div class="footer-hero">CHANGING LIVES EVERY DAY</div>
+  <div class="feedback">We'd love to know what you think <button>Give Feedback</button></div>
+
+  <div class="overlay" id="deposit-overlay">
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="deposit-title">
+      <div class="modal-top">
+        <span class="step">Step 1 of 2</span>
+        <button type="button" class="close" id="close-deposit" aria-label="Close">×</button>
+      </div>
+      <h2 id="deposit-title">Fund your account</h2>
+      <span class="label" id="deposit-description">Choose from the options or enter an amount</span>
+      <div class="quick" id="quick-values" role="group" aria-labelledby="deposit-description"></div>
+      <label class="label" for="deposit-amount">Amount to deposit</label>
+      <div class="amount-field"><span>£</span><input id="deposit-amount" inputmode="decimal" autocomplete="off"></div>
+      <p class="hint" id="deposit-hint">£2 is the minimum amount you can deposit.</p>
+      <button type="button" class="deposit" id="deposit-submit" disabled>Deposit</button>
+    </section>
+  </div>
+
+  <aside class="flyout" id="flyout" aria-label="Demo customers">
+    <button type="button" class="flyout-tab" id="flyout-tab" aria-controls="flyout" aria-expanded="false">Demo customers</button>
+    <header><h2>Demo customers</h2><p>Edit a customer, then Load to refresh and call Dynamic Yield.</p></header>
+    <div class="flyout-body">
+      <div id="customers"></div>
+      <p class="status" id="dy-status"></p>
+      <h3>Request</h3>
+      <pre id="dy-request">—</pre>
+      <h3>Response</h3>
+      <pre id="dy-response">—</pre>
+    </div>
+  </aside>
+
+  <script>
+    const CAMPAIGN = "jhcampaign-custom-deposit";
+    const MIN_DEPOSIT = 2;
+    const DEFAULTS = { title: "Fund your account", description: "Choose from the options or enter an amount", values: [10, 15, 20] };
+
+    const overlay = document.getElementById("deposit-overlay");
+    const titleEl = document.getElementById("deposit-title");
+    const descEl = document.getElementById("deposit-description");
+    const quickEl = document.getElementById("quick-values");
+    const input = document.getElementById("deposit-amount");
+    const hint = document.getElementById("deposit-hint");
+    const submit = document.getElementById("deposit-submit");
+
+    const STORE_KEY = "dy-demo-customers";
+    const ACTIVE_KEY = "dy-demo-active";
+    const DEFAULT_CUSTOMERS = [
+      { id: "c1", name: "Sarah Jones", dyid: "6142910129750784029", session: "", maxDepositLimit: 20 },
+      { id: "c2", name: "Tom Patel", dyid: "", session: "", maxDepositLimit: 50 },
+      { id: "c3", name: "Grace Okafor", dyid: "", session: "", maxDepositLimit: 500 }
+    ];
+    const customers = JSON.parse(localStorage.getItem(STORE_KEY) || "null") ?? DEFAULT_CUSTOMERS;
+    const active = customers.find(c => c.id === localStorage.getItem(ACTIVE_KEY)) ?? customers[0];
+    const saveCustomers = () => localStorage.setItem(STORE_KEY, JSON.stringify(customers));
+
+    // Sent to Dynamic Yield as context.pageAttributes.maxDepositLimit.
+    const maxDepositLimit = Number(active.maxDepositLimit) || 0;
+
+    const formatGBP = value => `£${Number.isInteger(value) ? value : value.toFixed(2)}`;
+
+    function campaignData(dyResponse) {
+      const choice = dyResponse?.choices?.find(c => c.name === CAMPAIGN);
+      const data = choice?.variations?.[0]?.payload?.data ?? {};
+      const values = Array.isArray(data.values) ? data.values.map(Number).filter(v => Number.isFinite(v) && v >= MIN_DEPOSIT) : [];
+      return {
+        title: typeof data.title === "string" && data.title ? data.title : DEFAULTS.title,
+        description: typeof data.description === "string" && data.description ? data.description : DEFAULTS.description,
+        values: values.length ? values : DEFAULTS.values
+      };
+    }
+
+    function validate() {
+      const raw = input.value.trim();
+      const amount = Number(raw);
+      let message = `£${MIN_DEPOSIT} is the minimum amount you can deposit.`;
+      let ok = raw !== "" && /^\d+(\.\d{1,2})?$/.test(raw) && amount >= MIN_DEPOSIT;
+      if (ok && amount > maxDepositLimit) {
+        ok = false;
+        message = `Your deposit limit is ${formatGBP(maxDepositLimit)}.`;
+      }
+      hint.textContent = message;
+      hint.classList.toggle("error", raw !== "" && !ok);
+      submit.disabled = !ok;
+      quickEl.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(Number(b.dataset.value) === amount)));
+    }
+
+    function renderDeposit(dyResponse) {
+      const { title, description, values } = campaignData(dyResponse);
+      titleEl.textContent = title;
+      descEl.textContent = description;
+      quickEl.replaceChildren(...values.map(value => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.dataset.value = value;
+        button.textContent = formatGBP(value);
+        button.setAttribute("aria-pressed", "false");
+        return button;
+      }));
+      input.value = "";
+      validate();
+    }
+
+    quickEl.addEventListener("click", event => {
+      const button = event.target.closest("button[data-value]");
+      if (!button) return;
+      input.value = button.dataset.value;
+      validate();
+    });
+    input.addEventListener("input", validate);
+    document.getElementById("close-deposit").addEventListener("click", () => { overlay.hidden = true; });
+    document.getElementById("open-deposit").addEventListener("click", () => { overlay.hidden = false; input.focus(); });
+    document.addEventListener("keydown", event => { if (event.key === "Escape") overlay.hidden = true; });
+    submit.addEventListener("click", () => alert(`Proceed to step 2 with ${formatGBP(Number(input.value))}`));
+
+    const flyout = document.getElementById("flyout");
+    const flyoutTab = document.getElementById("flyout-tab");
+    const setFlyout = open => {
+      flyout.classList.toggle("open", open);
+      flyoutTab.setAttribute("aria-expanded", String(open));
+      sessionStorage.setItem("dy-demo-flyout", open ? "1" : "");
+    };
+    flyoutTab.addEventListener("click", () => setFlyout(!flyout.classList.contains("open")));
+    setFlyout(sessionStorage.getItem("dy-demo-flyout") === "1");
+
+    const fields = [["name", "Name", "text"], ["maxDepositLimit", "Max limit £", "number"], ["dyid", "DYID", "text"], ["session", "Session", "text"]];
+    const customersEl = document.getElementById("customers");
+    customersEl.replaceChildren(...customers.map(customer => {
+      const card = document.createElement("div");
+      card.className = `customer${customer === active ? " active" : ""}`;
+      for (const [key, text, type] of fields) {
+        const label = document.createElement("label");
+        const input = document.createElement("input");
+        input.type = type;
+        input.value = customer[key] ?? "";
+        if (type === "number") input.min = "0";
+        if (key === "dyid" || key === "session") input.placeholder = "Issued by DY if empty";
+        input.addEventListener("input", () => {
+          customer[key] = type === "number" ? Number(input.value) : input.value.trim();
+          saveCustomers();
+        });
+        label.append(text, input);
+        card.append(label);
+      }
+      const load = document.createElement("button");
+      load.type = "button";
+      load.textContent = customer === active ? "Reload this customer" : `Load ${customer.name || "customer"}`;
+      load.addEventListener("click", () => {
+        saveCustomers();
+        localStorage.setItem(ACTIVE_KEY, customer.id);
+        location.reload();
+      });
+      card.append(load);
+      return card;
+    }));
+
+    const statusEl = document.getElementById("dy-status");
+    const showJson = (id, value) => { document.getElementById(id).textContent = value ? JSON.stringify(value, null, 2) : "—"; };
+    const cookie = (json, name) => json?.cookies?.find(c => c.name === name)?.value;
+
+    async function loadDecision() {
+      statusEl.textContent = `Requesting decision for ${active.name} (limit ${formatGBP(maxDepositLimit)})…`;
+      try {
+        const res = await fetch("/api/choose", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ maxDepositLimit, dyid: active.dyid || undefined, session: active.session || undefined })
+        });
+        const data = await res.json();
+        showJson("dy-request", data.request);
+        showJson("dy-response", data.response ?? { error: data.error });
+        if (!res.ok) throw new Error(data.error || `HTTP ${data.status ?? res.status}`);
+        active.dyid = cookie(data.response, "_dyid_server") || active.dyid;
+        active.session = cookie(data.response, "_dyjsession") || active.session;
+        saveCustomers();
+        statusEl.textContent = `${active.name}: decision received.`;
+        statusEl.classList.remove("error");
+        renderDeposit(data.response);
+      } catch (error) {
+        statusEl.textContent = `${active.name}: ${error.message}. Showing default options.`;
+        statusEl.classList.add("error");
+        renderDeposit(null);
+      }
+    }
+
+    renderDeposit(null);
+    loadDecision();
+  </script>
+</body>
+</html>
